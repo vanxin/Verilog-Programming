@@ -1,0 +1,257 @@
+/*Moore Design Method*/
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    20:14:41 11/13/2013 
+// Design Name: 
+// Module Name:    Moore 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Moore(
+	input clk,
+	input reset,
+	input la,
+	input lb,
+	output reg[2:0] leda,
+	output reg[2:0] ledb
+    );
+	//initial
+	reg ta = 1;
+	reg tb = 0;
+	reg[1:0]state,nextstate;
+	//state encoding
+	parameter S0 = 2'b00;
+	parameter S1 = 2'b01;
+	parameter S2 = 2'b10;
+	parameter S3 = 2'b11;
+	
+	//fre_div
+	reg[28:0] clock;
+	always@(posedge clk)
+	begin
+		clock <= clock+1;
+	end
+	//scan
+	always@(posedge clock[28])
+	begin
+		ta <= la;
+		tb <= lb;
+	end
+	//state register
+	always@(posedge clock[28], posedge reset)
+		if(reset)state <= S0;
+		else state <= nextstate;
+	
+	//Next state logic
+	always@(*)
+		case(state)
+			S0:if(ta == 1) nextstate = S0;
+				else	nextstate = S1;
+			//auto turn after 5s
+			S1:nextstate = S2;
+			S2:if(tb == 1) nextstate = S2;
+				else nextstate = S3;
+			S3:nextstate = S0;
+			default:nextstate = S0;
+		endcase
+	
+	//output logic
+	always@(posedge clk)
+	begin
+		if(state == S0)
+		begin 
+			leda <= 3'b100;//green
+			ledb <= 3'b001;//red
+		end
+		else if(state == S1)
+		begin
+			leda <= 3'b010;//yellow
+			ledb <= 3'b001;//red
+		end
+		else if(state == S2)
+		begin 
+			leda <= 3'b001;//red
+			ledb <= 3'b100;//green
+		end
+		else
+		begin 
+			leda <= 3'b001;//red
+			ledb <= 3'b010;//yellow
+		end
+	end
+endmodule
+
+//////////////////////////////////////////////////////////////////////////////////
+//管脚约束文件
+//////////////////////////////////////////////////////////////////////////////////
+NET "leda[0]" LOC = "V15";
+NET "leda[1]" LOC = "M11";
+NET "leda[2]" LOC = "N11";
+NET "ledb[0]" LOC = "U16";
+NET "ledb[1]" LOC = "V16";
+NET "ledb[2]" LOC = "U15";
+NET "clk" LOC = "V10";
+NET "reset" LOC = "B8";
+NET "la" LOC = "T5";
+NET "lb" LOC = "V8";
+
+
+/*Mealy Design Method*/
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date:    00:15:16 11/14/2013 
+// Design Name: 
+// Module Name:    Mealy 
+// Project Name: 
+// Target Devices: 
+// Tool versions: 
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Mealy(
+	input clk,
+	input reset,
+	input la,
+	input lb,
+	input parade,
+	input leaves,
+	output reg[2:0] leda,
+	output reg[2:0] ledb
+    );
+	 
+	//initial
+	reg ta = 1;
+	reg tb = 0;
+	reg r = 0;
+	reg p = 0;
+	reg m = 0;
+	reg[1:0]state,nextstate;
+	reg[1:0]mstate,mnextstate;
+	//state encoding
+	parameter S0 = 2'b00;
+	parameter S1 = 2'b01;
+	parameter S2 = 2'b10;
+	parameter S3 = 2'b11;
+	parameter M0 = 1'b0;
+	parameter M1 = 1'b1;
+	//fre_div
+	reg[28:0] clock;
+	always@(posedge clk)
+	begin
+		clock <= clock+1;
+	end
+	
+	//scan
+	always@(posedge clock[28])
+	begin
+		ta <= la;
+		tb <= lb;
+		r <= leaves;
+		p <= parade;
+	end
+	//state register
+	always@(posedge clock[28], posedge reset)
+		if(reset)
+		begin 
+			state <= S0;
+			mstate <= M0;
+		end
+		else 
+		begin
+			state <= nextstate;
+			mstate <= mnextstate;
+		end
+		
+	//Next state logic
+	always@(*)
+	begin
+		case(state)
+			S0:if(ta == 1) nextstate = S0;
+				else	nextstate = S1;
+			S1:nextstate = S2;
+			S2:if(tb == 1 | mnextstate == M1) nextstate = S2;
+				else nextstate = S3;
+			S3:nextstate = S0;
+			default:nextstate = S0;
+		endcase
+		case(mstate)
+			M0:if(p == 1) mnextstate = M1;
+				else mnextstate = M0;
+			M1:if(r == 1)  mnextstate = M0;
+				else mnextstate = M1;
+				default: mnextstate = M0;
+		endcase
+	end
+	
+	//output logic
+	always@(posedge clk)
+	begin
+		if(ta == 1 & state == S0)
+		begin 
+			leda <= 3'b100;//green
+			ledb <= 3'b001;//red
+		end
+		else if(ta == 0 & state == S0)
+		begin
+			leda <= 3'b010;//yellow
+			ledb <= 3'b001;//red
+		end
+		else if((state == S1) | ((tb == 1 | mstate == M1 ) & state == S2))
+		begin 
+			leda <= 3'b001;//red
+			ledb <= 3'b100;//green
+		end
+		else if(tb == 0 & mstate == M0 & state == S2)
+		begin 
+			leda <= 3'b001;//red
+			ledb <= 3'b010;//yellow
+		end
+		else if(state == S3)
+		begin 
+			leda <= 3'b100;//green
+			ledb <= 3'b001;//red
+		end
+		//initial
+		else
+		begin 
+			leda <= 3'b100;//green
+			ledb <= 3'b001;//red
+		end
+	end
+endmodule
+//////////////////////////////////////////////////////////////////////////////////
+//管脚约束文件
+//////////////////////////////////////////////////////////////////////////////////
+NET "leda[0]" LOC = "V15";
+NET "leda[1]" LOC = "M11";
+NET "leda[2]" LOC = "N11";
+NET "ledb[0]" LOC = "U16";
+NET "ledb[1]" LOC = "V16";
+NET "ledb[2]" LOC = "U15";
+NET "clk" LOC = "V10";
+NET "reset" LOC = "B8";
+NET "la" LOC = "T5";
+NET "lb" LOC = "V8";
+NET "parade" LOC = "T9";
+NET "leaves" LOC = "T10";
