@@ -1,0 +1,17 @@
+NET "clk" LOC = "V10";
+NET "Start" LOC = "C4";
+NET "Stop" LOC = "D9";
+NET "Inc" LOC = "A8";
+NET "Reset" LOC = "B8";
+NET "Seg_Select[0]" LOC = "N16";
+NET "Seg_Select[1]" LOC = "N15";
+NET "Seg_Select[2]" LOC = "P18";
+NET "Seg_Select[3]" LOC = "P17";
+NET "a_to_g[0]" LOC = "L14";
+NET "a_to_g[1]" LOC = "N14";
+NET "a_to_g[2]" LOC = "M14";
+NET "a_to_g[3]" LOC = "U18";
+NET "a_to_g[4]" LOC = "U17";
+NET "a_to_g[5]" LOC = "T18";
+NET "a_to_g[6]" LOC = "T17";
+NET "dp" LOC = "M13";

@@ -1,0 +1,256 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Sun Yat-sen University
+// Engineer: vanxinliu
+// Email:vanxinliu@gmail.com
+// 
+// Create Date:    13:27:29 11/27/2013 
+// Design Name: 
+// Module Name:    Millisecond_Timer 
+// Project Name: 	  Millisecond_Timer 
+// Target Devices:   Spartan-6
+// Tool versions:  Xilinx ISE Design Suite 12.3
+// Description: receive the parameter and display the Timer on seven-segments
+//
+// Dependencies: 
+//
+// Revision: 1.0
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Millisecond_Timer(
+	input clk,
+	input Start,
+	input Stop,
+	input Inc,
+	input Reset,
+	output wire[6:0] a_to_g,
+	output wire[3:0] Seg_Select,
+	output wire dp
+    );
+	 
+	wire Clk_1KHz;
+	//Add clock divider
+	//param request:
+	//				    clk loc=V10
+	//param response:
+	//              Clk_1KHz:signal with frequency of 1KHz
+	Clk_Div(clk,Clk_1KHz);
+	//Store the time
+	wire[15:0] Digit;
+	//Add Counter module
+	//param request:
+	//             Clk_1KHz,Reset,Start,Stop,Inc signal
+	//param response:
+	//             Digit
+	Counter(Clk_1KHz,Reset,Start,Stop,Inc,Digit);
+	//Add Seven_Seg module
+	//param request: 
+	//			 		 Digit:store the time
+	//					 a_to_g:control how the Seven Segment display
+	//	             Seg_Select:select which seven segment to display digit
+	//param response:
+	//              Display time on four seven-segments
+	Seven_Seg(clk,Digit,a_to_g,Seg_Select,dp);
+endmodule
+
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Sun Yat-sen University
+// Engineer: vanxinliu
+// Email:vanxinliu@gmail.com
+// 
+// Create Date:    13:27:29 11/27/2013 
+// Design Name: 
+// Module Name:    Millisecond_Timer 
+// Project Name: 
+// Target Devices: Spartan-6
+// Tool versions: Xilinx ISE Design Suite 12.3
+// Description: Divide the clock(V10:100MHz to 1KHz)
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Clk_Div(
+	input Clk_100MHz,
+	output reg Clk_1KHz
+	);
+	reg[15:0] count;
+	always@(posedge Clk_100MHz)
+		begin
+			if(count == 16'b1100001101010000)	begin Clk_1KHz = ~Clk_1KHz; count = 0;end
+			else count <= count + 1;
+		end
+	//assign Clk_1KHz = count[15];
+endmodule
+
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Sun Yat-sen University
+// Engineer: vanxinliu
+// Email:vanxinliu@gmail.com
+//
+// Create Date:    13:27:29 11/27/2013 
+// Design Name: 
+// Module Name:    Millisecond_Timer 
+// Project Name: 
+// Target Devices: Spartan-6
+// Tool versions: Xilinx ISE Design Suite 12.3
+// Description: Display the Digit on seven-segments
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Seven_Seg(
+	input Clk_100MHz,
+	input[15:0]	Digit,
+	output reg[6:0] a_to_g,
+	output reg[3:0] Seg_Select,
+	output reg dp
+	);
+	reg[20:0] count;
+	wire[3:0] Seg;
+	wire[1:0] Select;
+	reg[3:0]	Digit_Display;
+	
+	always@(posedge Clk_100MHz)
+		begin
+			count <= count + 1;
+		end
+	assign Select = count[20:19];
+	assign Seg=4'b1111;
+	always@(*)
+		begin
+			Seg_Select = 4'b1111;
+			if(Seg[Select] == 1)	Seg_Select[Select]=0;
+		end
+		
+		
+	//select which places to displan
+	always@(*)
+		case(Select)
+			0:begin	Digit_Display=Digit[3:0];	dp = 1;	end
+			1:begin	Digit_Display=Digit[7:4];	dp = 1;	end
+			2:begin	Digit_Display=Digit[11:8];	dp = 1;	end
+			3:begin	Digit_Display=Digit[15:12];	dp = 0;	end
+			default:begin	Digit_Display=Digit[3:0];	dp = 1;	end
+		endcase
+		
+	//encoding
+	always@(*)
+		case(Digit_Display)
+			0:a_to_g=7'b0000001;
+			1:a_to_g=7'b1001111;
+			2:a_to_g=7'b0010010;
+			3:a_to_g=7'b0000110;
+			4:a_to_g=7'b1001100;
+			5:a_to_g=7'b0100100;
+			6:a_to_g=7'b0100000;
+			7:a_to_g=7'b0001111;
+			8:a_to_g=7'b0000000;
+			9:a_to_g=7'b0000100;
+			'hA:a_to_g=7'b0001000;
+			'hB:a_to_g=7'b1100000;
+			'hC:a_to_g=7'b0110001;
+			'hD:a_to_g=7'b1000010;
+			'hE:a_to_g=7'b0110000;
+			'hF:a_to_g=7'b0111000;
+			default:a_to_g=7'b0000001;
+		endcase
+endmodule
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Sun Yat-sen University
+// Engineer: Vanxinliu
+// Email: vanxinliu@gmail.com
+// 
+// Create Date:    13:27:29 11/27/2013 
+// Design Name: 
+// Module Name:    Counter 
+// Project Name: 
+// Target Devices: Spartan-6
+// Tool versions: Xilinx ISE Design Suite 12.3
+// Description: 
+//
+// Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Counter(
+	input Clk_1KHz,
+	input Reset,
+	input Start,
+	input Stop,
+	input Inc,
+	output reg[15:0] Digit 
+	);
+	//State Encoding
+	parameter State_Start = 2'b00;
+	parameter State_Stop = 2'b01;
+	parameter State_Reset = 2'b10;
+	parameter State_Trap = 2'b11;
+	
+	reg[1:0]	state,nextstate;
+	
+	//State Transitions Driver
+	always@(posedge Clk_1KHz)
+		state = nextstate;
+		
+	//State Transitions Logic
+	always@(*)
+		case(state)
+			State_Start: if(Stop == 1)	nextstate = State_Stop;
+							 else if(Reset == 1) nextstate = State_Reset;
+							 else nextstate = State_Start;
+			State_Stop: if(Start == 1)	nextstate = State_Start;
+							else if(Inc == 1) nextstate = State_Trap;
+							else if(Reset == 1) nextstate = State_Reset;
+							else nextstate = State_Stop;
+			State_Reset: if(Start == 1) nextstate = State_Start;
+							else if(Inc == 1) nextstate = State_Trap;
+							else nextstate = State_Reset;
+			State_Trap: if(Inc == 1) nextstate = State_Trap;
+					      else if(Reset == 1) nextstate = State_Reset;
+			            else if(Start == 1) nextstate = State_Start;
+							else nextstate = State_Stop;
+			default: nextstate = State_Start;
+		endcase
+	//response of different states
+	always@(posedge Clk_1KHz)
+		case(state)
+			State_Start: 
+				begin
+					if(Digit[15:12] == 4'b1010)	Digit[15:12] <= 4'b0000;
+					if(Digit[11:8] == 4'b1010)	begin	Digit[11:8] <= 4'b0000;	Digit[15:12] <= Digit[15:12]+1;	end
+					if(Digit[7:4] == 4'b1010)	begin Digit[7:4]	<= 4'b0000;	Digit[11:8]	<= Digit[11:8]+1;	end
+					if(Digit[3:0] == 4'b1010)	begin	Digit[3:0]	<= 4'b0000; Digit[7:4] <= Digit[7:4]+1;	end
+					else Digit[3:0] <= Digit[3:0]+1;
+				end
+			State_Stop:
+				;
+			State_Reset:Digit[15:0] <= 16'b0000000000000000; 
+				
+			State_Trap: 
+				begin
+					if(Digit[15:12] == 4'b1010)	Digit[15:12] <= 4'b0000;
+					if(Digit[11:8] == 4'b1010)	begin	Digit[11:8] <= 4'b0000;	Digit[15:12] <= Digit[15:12]+1;	end
+					if(Digit[7:4] == 4'b1010)	begin Digit[7:4]	<= 4'b0000;	Digit[11:8]	<= Digit[11:8]+1;	end
+					if(Digit[3:0] == 4'b1010)	begin	Digit[3:0]	<= 4'b0000; Digit[7:4] <= Digit[7:4]+1;	end
+					else Digit[3:0] <= Digit[3:0]+1;
+				end
+			default: ;
+		endcase
+endmodule
+
+
